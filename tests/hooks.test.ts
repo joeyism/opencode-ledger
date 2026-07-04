@@ -126,6 +126,43 @@ describe("hooks", () => {
       expect(output.output).not.toContain("KNOWN FACTS");
     });
 
+    it("uses custom injectableExtensions for keyword matching", async () => {
+      state.options.injectableExtensions = ["parquet", "h5"];
+      addFinding(state, {
+        fact: "data.parquet is columnar format with row groups",
+        topic: "file-format:data.parquet",
+        establishedAt: Date.now(),
+        sourceStep: 1,
+      });
+
+      const output = { output: "some output", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "bash", sessionID: "s", callID: "c", args: { command: "python read.py data.parquet" } },
+        output
+      );
+
+      expect(output.output).toContain("KNOWN FACTS");
+      expect(output.output).toContain("data.parquet is columnar");
+    });
+
+    it("does not inject when file extension is not in injectableExtensions", async () => {
+      state.options.injectableExtensions = ["parquet", "h5"];
+      addFinding(state, {
+        fact: "model.ckpt has no header",
+        topic: "file-format:model.ckpt",
+        establishedAt: Date.now(),
+        sourceStep: 1,
+      });
+
+      const output = { output: "some output", metadata: {} };
+      await hooks["tool.execute.after"](
+        { tool: "bash", sessionID: "s", callID: "c", args: { command: "python check.py model.ckpt" } },
+        output
+      );
+
+      expect(output.output).not.toContain("KNOWN FACTS");
+    });
+
     it("escalates the message after multiple ignored injections", async () => {
       state.options.escalationInjections = 3;
       addFinding(state, {

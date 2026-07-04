@@ -2,15 +2,16 @@ import type { PluginState } from "./types.js";
 import { getRelevantFindings, createEmptyStep } from "./state.js";
 import { runExtractionBackground } from "./extract.js";
 
-function extractKeywordsFromCommand(command: string, description?: string): string[] {
+function extractKeywordsFromCommand(command: string, extensions: string[], description?: string): string[] {
   const keywords: string[] = [];
-  // Extract filenames from the command
-  const fileRegex = /[\w.-]+\.(?:ckpt|bin|bpe|json|safetensors|npy|pt|pth|csv|txt|dat)/gi;
+  const escaped = extensions.map(e => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const fileRegex = new RegExp(`[\\w.-]+\\.(?:${escaped.join("|")})`, "gi");
   let match;
   while ((match = fileRegex.exec(command)) !== null) {
     keywords.push(match[0]);
   }
   if (description) {
+    fileRegex.lastIndex = 0;
     const descFileMatch = fileRegex.exec(description);
     if (descFileMatch) keywords.push(descFileMatch[0]);
   }
@@ -41,7 +42,7 @@ export function createHooks(ctx: any, state: PluginState) {
 
       const command = input.args?.command || "";
       const description = input.args?.description || "";
-      const keywords = extractKeywordsFromCommand(command, description);
+      const keywords = extractKeywordsFromCommand(command, state.options.injectableExtensions, description);
       if (keywords.length === 0) return;
 
       const relevant = getRelevantFindings(state, keywords);

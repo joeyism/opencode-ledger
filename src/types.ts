@@ -5,6 +5,7 @@ export interface LedgerOptions {
   injectionEnabled?: boolean;       // Whether to inject findings into outputs (default: true)
   agent?: string;                   // Agent to use for extraction (default: "momus")
   escalationInjections?: number;    // After how many injections to escalate (default: 4)
+  injectableExtensions?: string[];  // File extensions that trigger injection (default: ML-focused set)
 }
 
 export interface ResolvedOptions {
@@ -14,6 +15,7 @@ export interface ResolvedOptions {
   injectionEnabled: boolean;
   agent: string;
   escalationInjections: number;
+  injectableExtensions: string[];
 }
 
 export interface Finding {

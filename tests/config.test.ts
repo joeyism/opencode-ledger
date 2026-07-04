@@ -9,6 +9,8 @@ describe("config", () => {
     expect(opts.maxFindingsPerTopic).toBe(5);
     expect(opts.injectionEnabled).toBe(true);
     expect(opts.agent).toBe("momus");
+    expect(opts.escalationInjections).toBe(4);
+    expect(opts.injectableExtensions).toEqual(["ckpt", "bin", "bpe", "json", "safetensors", "npy", "pt", "pth", "csv", "txt", "dat"]);
   });
 
   it("resolves custom options", () => {
@@ -16,5 +18,10 @@ describe("config", () => {
     expect(opts.extractionIntervalSteps).toBe(5);
     expect(opts.maxFindings).toBe(20);
     expect(opts.agent).toBe("oracle");
+  });
+
+  it("resolves custom injectableExtensions", () => {
+    const opts = resolveOptions({ injectableExtensions: ["parquet", "h5", "onnx"] });
+    expect(opts.injectableExtensions).toEqual(["parquet", "h5", "onnx"]);
   });
 });
