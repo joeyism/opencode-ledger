@@ -1,6 +1,6 @@
 {
   "name": "opencode-ledger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenCode plugin that tracks confirmed findings and injects them to prevent re-investigation",
   "type": "module",
   "main": "dist/index.js",
