@@ -8,14 +8,63 @@ When an agent investigates something complex — like reverse-engineering a bina
 
 The ledger fixes this. It watches the agent work, distills confirmed facts from tool outputs, stores them, and re-injects them when the agent is about to re-investigate the same thing. If the agent keeps ignoring the facts, the ledger escalates.
 
+## Installation
+
+```bash
+npm install opencode-ledger
+```
+
+Add to your `opencode.json` (or `opencode.jsonc`):
+
+```json
+{
+  "plugins": [
+    "opencode-ledger"
+  ]
+}
+```
+
+Or configure programmatically via the SDK:
+
+```typescript
+import { ledger } from "opencode-ledger";
+
+const hooks = await ledger(ctx, {
+  // optional configuration — see Configuration section below
+});
+```
+
+## Quick Start
+
+The plugin works with zero configuration — the defaults are tuned for ML model reverse-engineering (the plugin's origin use case). Add it to your `opencode.json` and you're done:
+
+```json
+{
+  "plugins": [
+    "opencode-ledger"
+  ]
+}
+```
+
+The plugin will automatically:
+- Watch the agent's tool calls and step completions
+- Extract confirmed facts from tool outputs every 15 steps
+- Inject relevant facts when the agent runs `bash` commands touching files with known findings
+- Escalate if the agent keeps ignoring injected facts
+
+To customize behavior (extraction interval, max findings, file extensions, escalation threshold), see [Configuration](#configuration) below.
+
 ## Who Is This For?
 
-This plugin is built for **ML model reverse-engineering and binary format archaeology** — long, probe-heavy investigations where facts accumulate slowly through many small observations:
+This plugin is for **any long-running agent investigation where facts accumulate through probing and the agent forgets earlier findings as the session grows.** If your model struggles with long-context memory — re-running commands it already ran, re-deriving facts it already established, going in circles — this plugin breaks that loop.
 
-- Figuring out an unknown `.ckpt`, `.safetensors`, `.bin`, or `.npy` file format
-- Decoding tokenizers one token at a time (`.bpe` vocab files)
-- Mapping weight layouts in checkpoint files
-- Debugging segfaults that require accumulating observations across many runs
+The plugin was born from **ML model reverse-engineering and binary format archaeology**, and the defaults reflect that origin (ML-focused file extensions, ML-flavored extraction examples). But the mechanism is domain-agnostic. Any investigation that involves accumulating confirmed facts through many small observations benefits:
+
+- **ML / binary formats**: figuring out unknown `.ckpt`, `.safetensors`, `.bin` files; decoding tokenizers; mapping weight layouts
+- **API / schema discovery**: probing an unfamiliar API or database — endpoint behaviors, field types, encoding conventions accumulate across calls
+- **Legacy code archaeology**: figuring out a codebase's conventions, data flow, and hidden dependencies through many small probes
+- **Flaky / Heisenbug debugging**: root-causing crashes that require accumulating observations across many runs and conditions
+- **Migration planning**: discovering constraints, edge cases, and failure modes through probing — and not losing them by step 40
 
 If your investigation involves running dozens of diagnostic commands and slowly building a picture of how something works, this plugin is for you.
 
@@ -127,7 +176,7 @@ const hooks = await ledger(ctx, {
 
 ### Customizing Extensions for Non-ML Domains
 
-The default extension list is ML-focused. If you're working in a different domain, customize it:
+The default extension list is ML-focused (the plugin's origin use case). For other domains, customize it:
 
 ```typescript
 // Data engineering
@@ -171,31 +220,13 @@ You're trying to load weights from a `.safetensors` or `.pt` file into a differe
 
 A crash only happens under specific conditions. Each probe narrows the cause: "crashes when attention mask has odd length," "crashes when batch > 4," "crash is in layer 7's attention." The ledger accumulates these partial findings. The escalation mechanism kicks in if the agent keeps re-running the same crash repro without synthesizing what it already knows.
 
-## Installation
+### API Schema Discovery
 
-```bash
-npm install opencode-ledger
-```
+You're probing an unfamiliar REST API with no documentation. Each request reveals something: "the `/users` endpoint returns ISO8601 timestamps in UTC," "`user_id` is a UUID v4," "the `status` field is an enum with 6 values," "pagination uses cursor tokens, not offsets." Over 30+ requests, the agent builds a picture of the API's contract. Without the ledger, it re-probes the same endpoints to recall the field types. With it, the facts are injected and it moves on to writing the integration.
 
-Add to your `opencode.json` (or `opencode.jsonc`):
+### Legacy Codebase Archaeology
 
-```json
-{
-  "plugins": [
-    "opencode-ledger"
-  ]
-}
-```
-
-Or configure programmatically via the SDK:
-
-```typescript
-import { ledger } from "opencode-ledger";
-
-const hooks = await ledger(ctx, {
-  // optional configuration — see Configuration section above
-});
-```
+You've inherited a large codebase with no docs. The agent probes: "the `PaymentService` class is the entry point," "transactions are committed in `finalizePayment()`, not `processPayment()`," "the `audit_log` table is written asynchronously." Each probe reveals one fact about the architecture. The ledger accumulates these so the agent doesn't re-investigate the same call paths when writing the refactor.
 
 ## License
 
